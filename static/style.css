@@ -1,3 +1,4 @@
+
 body {
     font-family: Arial, sans-serif;
     background-image: url('/static/mountain.jpg');
@@ -155,3 +156,4 @@ li {
     width: 90%;
     max-width: 400px;
 }
+
