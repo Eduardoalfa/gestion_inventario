@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, make_response
 import sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -93,6 +93,44 @@ def registrar_compra():
     conn.close()
     return redirect(url_for('index'))
 
+def generar_factura(producto_id, cantidad, fecha):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT nombre, precio FROM productos WHERE id = ?', (producto_id,))
+    producto = cursor.fetchone()
+    conn.close()
+
+    c = canvas.Canvas(f"factura_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf", pagesize=A4)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(300, 800, "HZ Impresiones 3D")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(300, 780, "FACTURA")
+    
+    c.setFont("Helvetica", 12)
+    c.drawString(50, 750, f"Fecha: {fecha}")
+    c.drawString(50, 730, "Detalles de la venta:")
+    c.drawString(50, 710, "-" * 100)
+    c.drawString(50, 690, "Producto")
+    c.drawString(250, 690, "Cantidad")
+    c.drawString(350, 690, "Precio Unitario")
+    c.drawString(450, 690, "Total")
+    c.drawString(50, 670, "-" * 100)
+    
+    y = 650
+    subtotal = cantidad * producto['precio']
+    c.drawString(50, y, producto['nombre'])
+    c.drawString(250, y, str(cantidad))
+    c.drawString(350, y, f"Q {producto['precio']:.2f}")
+    c.drawString(450, y, f"Q {subtotal:.2f}")
+    
+    c.drawString(50, y-40, "-" * 100)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(350, y-60, "Total a pagar:")
+    c.drawString(450, y-60, f"Q {subtotal:.2f}")
+    
+    c.save()
+    return f"factura_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+
 @app.route('/registrar_venta', methods=['POST'])
 def registrar_venta():
     producto_id = int(request.form['producto_id'])
@@ -108,11 +146,15 @@ def registrar_venta():
         cursor.execute('INSERT INTO ventas (producto_id, cantidad, fecha) VALUES (?, ?, ?)', (producto_id, cantidad, fecha))
         cursor.execute('UPDATE productos SET stock = stock - ? WHERE id = ?', (cantidad, producto_id))
         conn.commit()
+        conn.close()
+        
+        # Generar y enviar la factura
+        factura_path = generar_factura(producto_id, cantidad, fecha)
+        return send_file(factura_path, as_attachment=True)
     else:
+        conn.close()
         print(f"Error: No hay suficiente stock para realizar la venta. Stock disponible: {stock_actual[0] if stock_actual else 'Producto no encontrado'}")
-
-    conn.close()
-    return redirect(url_for('index'))
+        return redirect(url_for('index'))
 
 @app.route('/eliminar_producto', methods=['POST'])
 def eliminar_producto():
