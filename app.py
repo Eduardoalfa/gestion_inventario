@@ -43,7 +43,6 @@ def crear_tablas():
                     fecha TEXT,
                     FOREIGN KEY (producto_id) REFERENCES productos (id)
                     )''')
-
     conn.commit()
     conn.close()
 
@@ -93,8 +92,6 @@ def registrar_compra():
     conn.close()
     return redirect(url_for('index'))
 
-
-
 def generar_factura(producto_id, cantidad, fecha):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -141,7 +138,6 @@ def generar_factura(producto_id, cantidad, fecha):
     c.save()
     return ruta_factura
 
-
 @app.route('/registrar_venta', methods=['POST'])
 def registrar_venta():
     producto_id = int(request.form['producto_id'])
@@ -176,7 +172,6 @@ def download_factura(filename):
         ruta_factura = os.path.abspath(filename)
         return send_file(ruta_factura, as_attachment=True)
     except Exception as e:
-        print(f"Error al descargar la factura: {e}")
         return "Error al descargar el archivo", 500
 
 
