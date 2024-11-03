@@ -56,15 +56,13 @@
             {% endfor %}
         </table>
         {% if request.args.get('factura_path') %}
-    <div class="links-c">
         <p>
             <a href="{{ url_for('download_factura', filename=request.args.get('factura_path').split('/')[-1]) }}">
                 Descargar Recibo
             </a>
         </p>
-    </div>
     {% endif %}
-</div>
+    </div>
 
     <div class="section">
         <h2>Realizar Compra</h2>
@@ -105,18 +103,16 @@
     <div class="section">
         <h2>Descargar y Generar Informes</h2>
         <section class="reports-links">
-        <div class="links-c">
             <p><a href="/informe">Generar Informe Sobre Compras y Ventas a PDF</a></p>
             <p><a href="/reporte_excel">Generar Informe de Inventario a Excel</a></p>
-            </div>
         </section>
     </div>
-    
 </main>
 
 <footer>
     <p>Hyper Z Impresiones 3D &copy; 2024</p>
 </footer>
+
 
 </body>
 </html>
