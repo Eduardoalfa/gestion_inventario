@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, make_response
+from flask import Flask, render_template, request, redirect, url_for, send_file
 import sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -9,7 +9,6 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'edu7701')
-
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'empresa_3d.db')
 
@@ -47,6 +46,7 @@ def crear_tablas():
 
     conn.commit()
     conn.close()
+
 crear_tablas()
 
 @app.route('/')
@@ -93,6 +93,8 @@ def registrar_compra():
     conn.close()
     return redirect(url_for('index'))
 
+
+
 def generar_factura(producto_id, cantidad, fecha):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -100,12 +102,27 @@ def generar_factura(producto_id, cantidad, fecha):
     producto = cursor.fetchone()
     conn.close()
 
-    c = canvas.Canvas(f"factura_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf", pagesize=A4)
+    carpeta_principal = 'FACTURAS_2024'
+    if not os.path.exists(carpeta_principal):
+        os.makedirs(carpeta_principal)
+
+    mes_actual = datetime.now().strftime('%Y-%m')
+    carpeta_mes = os.path.join(carpeta_principal, mes_actual)
+
+    if not os.path.exists(carpeta_mes):
+        os.makedirs(carpeta_mes)
+
+
+    fecha_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    nombre_factura = f"Factura({fecha_str}).pdf"
+    ruta_factura = os.path.join(carpeta_mes, nombre_factura)
+
+    c = canvas.Canvas(ruta_factura, pagesize=A4)
     c.setFont("Helvetica-Bold", 16)
     c.drawCentredString(300, 800, "HZ Impresiones 3D")
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(300, 780, "FACTURA")
-    
+
     c.setFont("Helvetica", 12)
     c.drawString(50, 750, f"Fecha: {fecha}")
     c.drawString(50, 730, "Detalles de la venta:")
@@ -115,26 +132,29 @@ def generar_factura(producto_id, cantidad, fecha):
     c.drawString(350, 690, "Precio Unitario")
     c.drawString(450, 690, "Total")
     c.drawString(50, 670, "-" * 100)
-    
+
     y = 650
     subtotal = cantidad * producto['precio']
     c.drawString(50, y, producto['nombre'])
     c.drawString(250, y, str(cantidad))
     c.drawString(350, y, f"Q {producto['precio']:.2f}")
     c.drawString(450, y, f"Q {subtotal:.2f}")
-    
-    c.drawString(50, y-40, "-" * 100)
+
+    c.drawString(50, y - 40, "-" * 100)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(350, y-60, "Total a pagar:")
-    c.drawString(450, y-60, f"Q {subtotal:.2f}")
-    
+    c.drawString(350, y - 60, "Total a pagar:")
+    c.drawString(450, y - 60, f"Q {subtotal:.2f}")
+
     c.save()
-    return f"factura_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    return ruta_factura
+
 
 @app.route('/registrar_venta', methods=['POST'])
 def registrar_venta():
     producto_id = int(request.form['producto_id'])
     cantidad = int(request.form['cantidad'])
+
+    print(f"Registrando venta: Producto ID {producto_id}, Cantidad {cantidad}")
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -146,15 +166,27 @@ def registrar_venta():
         cursor.execute('INSERT INTO ventas (producto_id, cantidad, fecha) VALUES (?, ?, ?)', (producto_id, cantidad, fecha))
         cursor.execute('UPDATE productos SET stock = stock - ? WHERE id = ?', (cantidad, producto_id))
         conn.commit()
-        conn.close()
-        
-        # Generar y enviar la factura
+
         factura_path = generar_factura(producto_id, cantidad, fecha)
-        return send_file(factura_path, as_attachment=True)
+        conn.close()
+
+        return redirect(url_for('index', factura_path=factura_path))
     else:
         conn.close()
         print(f"Error: No hay suficiente stock para realizar la venta. Stock disponible: {stock_actual[0] if stock_actual else 'Producto no encontrado'}")
         return redirect(url_for('index'))
+
+
+@app.route('/download_factura/<path:filename>', methods=['GET'])
+def download_factura(filename):
+    try:
+        ruta_factura = os.path.abspath(filename)
+        return send_file(ruta_factura, as_attachment=True)
+    except Exception as e:
+        print(f"Error al descargar la factura: {e}")
+        return "Error al descargar el archivo", 500
+
+
 
 @app.route('/eliminar_producto', methods=['POST'])
 def eliminar_producto():
@@ -182,7 +214,7 @@ def informe():
     c.setFont("Helvetica-Bold", 12)
     c.drawCentredString(300, 800, "Informe Compras y Ventas - HZ Impresiones 3D")
     c.setFont("Helvetica", 10)
-    c.drawCentredString(300, 780, f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    c.drawCentredString(300, 780, f"Fecha: {datetime.now().strftime('%Y-%m-%d')}")
 
     y = 750
     c.drawString(100, y, "Compras realizadas:")
@@ -195,26 +227,27 @@ def informe():
     cursor.execute('''SELECT compras.id, productos.nombre, compras.cantidad, compras.fecha 
                       FROM compras 
                       JOIN productos ON compras.producto_id = productos.id''')
-    compras = cursor.fetchall()
-    for compra in compras:
-        c.drawString(100, y, f"{compra[0]} | {compra[1]} | {compra[2]} | {compra[3]}")
+    
+    for row in cursor.fetchall():
+        c.drawString(100, y, f"{row['id']} | {row['nombre']: <30} | {row['cantidad']} | {row['fecha']}")
         y -= 20
 
-    y -= 40
-    c.drawString(100, y, "Ventas")
     y -= 20
-    c.drawString(100, y, "ID|            Producto           | Cantidad | Fecha ")
+    c.drawString(100, y, "Ventas realizadas:")
+    y -= 20
+    c.drawString(100, y, "ID|            Producto           | Cantidad | Fecha")
     y -= 20
 
     cursor.execute('''SELECT ventas.id, productos.nombre, ventas.cantidad, ventas.fecha 
                       FROM ventas 
                       JOIN productos ON ventas.producto_id = productos.id''')
-    ventas = cursor.fetchall()
-    for venta in ventas:
-        c.drawString(100, y, f"{venta[0]} | {venta[1]} | {venta[2]} | {venta[3]}")
-        y -= 20
-    c.save()
 
+    for row in cursor.fetchall():
+        c.drawString(100, y, f"{row['id']} | {row['nombre']: <30} | {row['cantidad']} | {row['fecha']}")
+        y -= 20
+
+    conn.close()
+    c.save()
     return send_file("informe_HZ_movimientos.pdf", as_attachment=True)
 
 @app.route('/reporte_excel')
@@ -262,5 +295,4 @@ def reporte_excel():
     return send_file("reporte_inv.xlsx", as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-    app.run(debug=os.getenv('FLASK_DEBUG', False))
+    app.run(debug=False)
