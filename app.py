@@ -106,16 +106,9 @@ def generar_factura(producto_id, cantidad, fecha):
     if not os.path.exists(carpeta_principal):
         os.makedirs(carpeta_principal)
 
-    mes_actual = datetime.now().strftime('%Y-%m')
-    carpeta_mes = os.path.join(carpeta_principal, mes_actual)
-
-    if not os.path.exists(carpeta_mes):
-        os.makedirs(carpeta_mes)
-
-
-    fecha_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    fecha_str = datetime.now().strftime('%Y-%m-%d_%H-%M')
     nombre_factura = f"Factura({fecha_str}).pdf"
-    ruta_factura = os.path.join(carpeta_mes, nombre_factura)
+    ruta_factura = os.path.join(carpeta_principal, nombre_factura)
 
     c = canvas.Canvas(ruta_factura, pagesize=A4)
     c.setFont("Helvetica-Bold", 16)
