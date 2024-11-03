@@ -182,14 +182,6 @@ def eliminar_producto():
     conn.close()
     return redirect(url_for('index'))
 
-@app.route('/mostrar_inventario')
-def mostrar_inventario():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM productos')
-    productos = cursor.fetchall()
-    conn.close()
-    return render_template('inventario.html', productos=productos)
 
 @app.route('/informe')
 def informe():
