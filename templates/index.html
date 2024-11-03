@@ -54,12 +54,6 @@
             </tr>
             {% endfor %}
         </table>
-        {% if request.args.get('factura_path') %}
-        <p>
-            <a href="{{ url_for('download_factura', filename=request.args.get('factura_path').split('/')[-1]) }}">
-                Descargar Recibo
-            </a>
-        </p>
     {% endif %}
     </div>
 
