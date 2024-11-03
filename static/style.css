@@ -156,14 +156,3 @@ li {
     max-width: 400px;
 }
 
-.links-c {
-    text-align: center;
-}
-
-.links-c a {
-    display: inline-block;
-    margin: none;
-    text-decoration: none;
-    color: #007bff;
-    font-weight: bold;
-}
