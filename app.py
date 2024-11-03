@@ -82,7 +82,7 @@ def add_product():
 def registrar_compra():
     producto_id = int(request.form['producto_id'])
     cantidad = int(request.form['cantidad'])
-    fecha = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    fecha = datetime.now().strftime('%Y-%m-%d %H:%M')
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -98,14 +98,9 @@ def generar_factura(producto_id, cantidad, fecha):
     cursor.execute('SELECT nombre, precio FROM productos WHERE id = ?', (producto_id,))
     producto = cursor.fetchone()
     conn.close()
-
-    carpeta_principal = 'FACTURAS_2024'
-    if not os.path.exists(carpeta_principal):
-        os.makedirs(carpeta_principal)
-
+    
     fecha_str = datetime.now().strftime('%Y-%m-%d_%H-%M')
     nombre_factura = f"Factura({fecha_str}).pdf"
-    ruta_factura = os.path.join(carpeta_principal, nombre_factura)
 
     c = canvas.Canvas(ruta_factura, pagesize=A4)
     c.setFont("Helvetica-Bold", 16)
